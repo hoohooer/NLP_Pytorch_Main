@@ -16,7 +16,7 @@ class Args:
                         help='the output dir for model checkpoints')
         parser.add_argument('--bert_dir', default='../model/chinese-roberta-small-wwm-cluecorpussmall',
         help='bert dir for uer')
-        parser.add_argument('--task_type', default='mlc',
+        parser.add_argument('--task_type', default='tc',
         help='bert dir for uer')
         parser.add_argument('--task_name', default='zhaotoubiaonew_projectclassification',
         help='bert dir for uer')
@@ -30,7 +30,7 @@ class Args:
         parser.add_argument('--batch_size', default=32, type=int)
         parser.add_argument('--swa_start', default=2, type=int,
                         help='the epoch when swa start')
-        parser.add_argument('--train_epochs', default=50, type=int,
+        parser.add_argument('--train_epochs', default=5, type=int,
                         help='Max training epoch')
         parser.add_argument('--dropout_prob', default=0.3, type=float,
                         help='drop out probability')

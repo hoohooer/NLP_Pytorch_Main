@@ -5,7 +5,7 @@ import json
 import torch.nn as nn
 import config
 import os
-import preprocess_mlc
+import preprocess_tc
 
 checkpoint_path = './checkpoints/best.pt'
 

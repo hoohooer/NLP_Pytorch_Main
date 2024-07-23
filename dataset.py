@@ -1,7 +1,7 @@
 import sys
 import torch
 from torch.utils.data import Dataset, DataLoader
-from preprocess_mlc import BertFeature
+from preprocess_tc import BertFeature
 import config
 import os
 import pandas as pd

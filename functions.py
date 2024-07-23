@@ -31,23 +31,26 @@ class Multilabel_Categorical_CrossEntropy(nn.Module):
 
 def getresult(outputs, targets):
     assert len(outputs) == len(targets), "预测值与实际值数量不等，请检查！"
+    tp = fp = fn = tn = macro_accuracy = 0
     for i in range(len(outputs)):
-        asdf = 0
+        for j in range(len(outputs[i])):
+            if outputs[i][j] == 1 and targets[i][j] == 1:
+                tp += 1
+            elif outputs[i][j] == 1 and targets[i][j] == 0:
+                fp += 1
+            elif outputs[i][j] == 0 and targets[i][j] == 1:
+                fn += 1
+            elif outputs[i][j] == 0 and targets[i][j] == 0:
+                tn += 1
+        if outputs[i] == targets[i]:
+            macro_accuracy += 1
+    macro_accuracy /= len(outputs)
+    micro_accuracy = (tp + tn) / (tp + fp + fn + tn)
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    f1 = 2 * precision * recall / (precision + recall)
+    return macro_accuracy, micro_accuracy, f1
 
-def get_gp_classify(tensors):
-    """
-
-    :param tensors: batch * labels_num
-    :return: list of Tuple: (batch, label)
-    """
-    entities = []
-
-
-
-
-    for batch, label in torch.nonzero(tensors > 0):
-        entities.append((batch.item(), label.item()))
-    return entities
 
 
 
