@@ -176,7 +176,7 @@
      <string>选择</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_PretrainedModel_2">
+   <widget class="QLabel" name="label_TaskName">
     <property name="geometry">
      <rect>
       <x>480</x>
@@ -196,10 +196,16 @@
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>239</y>
+      <y>240</y>
       <width>920</width>
-      <height>500</height>
+      <height>400</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>宋体</family>
+      <pointsize>12</pointsize>
+     </font>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_RunParse">
@@ -222,6 +228,94 @@
     </property>
     <property name="text">
      <string>运行</string>
+    </property>
+   </widget>
+   <widget class="QProgressBar" name="progressBar_Train">
+    <property name="geometry">
+     <rect>
+      <x>190</x>
+      <y>660</y>
+      <width>400</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>宋体</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="layoutDirection">
+     <enum>Qt::LeftToRight</enum>
+    </property>
+    <property name="value">
+     <number>0</number>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="format">
+     <string>%p%</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_Train">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>660</y>
+      <width>100</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">font: 12pt &quot;宋体&quot;;</string>
+    </property>
+    <property name="text">
+     <string>训练进度</string>
+    </property>
+   </widget>
+   <widget class="QProgressBar" name="progressBar_Dev">
+    <property name="geometry">
+     <rect>
+      <x>190</x>
+      <y>690</y>
+      <width>400</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>宋体</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="layoutDirection">
+     <enum>Qt::LeftToRight</enum>
+    </property>
+    <property name="value">
+     <number>0</number>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+    <property name="format">
+     <string>%p%</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_Dev">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>690</y>
+      <width>100</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">font: 12pt &quot;宋体&quot;;</string>
+    </property>
+    <property name="text">
+     <string>评估进度</string>
     </property>
    </widget>
   </widget>

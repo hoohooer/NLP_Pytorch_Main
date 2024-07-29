@@ -1,13 +1,11 @@
 import os
-import pickle
-import shutil
-from sklearn.metrics import accuracy_score, f1_score, multilabel_confusion_matrix, classification_report
+from sklearn.metrics import classification_report
 import torch
 import torch.nn as nn
 from torchcrf import CRF
 import numpy as np
 from torch.utils.data import DataLoader, RandomSampler
-import sys
+import pickle
 from parsedata.preprocess_tc import preprocess_tc
 from parsedata.preprocess_ner import preprocess_ner
 from parsedata.dataset import MLDataset
@@ -19,9 +17,10 @@ from rich.progress import Progress
 from datetime import datetime
 import pandas as pd
 
-
-class Trainer:
-    def __init__(self, args, train_loader, dev_loader, test_loader):
+args = Args().get_parser()
+class Trainer():
+    def __init__(self, args, train_loader, dev_loader, test_loader, MyMainWindow):
+        self.MyMainWindow = MyMainWindow
         self.args = args
         gpu_ids = args.gpu_ids.split(',')
         self.device = torch.device("cpu" if gpu_ids[0] == '-1' else "cuda:" + gpu_ids[0])
@@ -72,11 +71,11 @@ class Trainer:
                     global_step += 1
                     if global_step % eval_step == 0:
                         dev_loss, macro_accuracy, micro_accuracy, f1 = self.dev(progress, dev_task)
-                        print(
-                            "【dev】 loss：{:.6f}, macro_accuracy：{:.4f}, micro_accuracy：{:.4f}, f1：{:.4f}, former_best_f1：{:.4f}"
-                            .format(dev_loss, macro_accuracy, micro_accuracy, f1, former_best_f1))
+                        self.MyMainWindow.updateTextBrowser(
+                            "【dev】 epoch：{}, loss：{:.6f}, macro_accuracy：{:.4f}, micro_accuracy：{:.4f}, f1：{:.4f}, former_best_f1：{:.4f}"
+                            .format(epoch + 1, dev_loss, macro_accuracy, micro_accuracy, f1, former_best_f1))
                         if f1 > former_best_f1:
-                            print("------------>save model")
+                            self.MyMainWindow.updateTextBrowser("------------>save model")
                             checkpoint = {
                                 'epoch': epoch,
                                 'loss': dev_loss,
@@ -150,11 +149,11 @@ class Trainer:
         report = classification_report(targets, outputs, target_names=labels)
         return report
 
-args = Args().get_parser()
+
 def main():
     labels = []
     if os.path.exists(args.data_dir + '{}_id2label.json'.format(args.task_name)) and os.path.exists(args.data_dir + '{}_data.pkl'.format(args.task_name)):
-        print('========读取预处理文件========')
+        print("========读取预处理文件========")
     else:
         print('========开始预处理========')
         with open(args.data_dir + 'datas.json', encoding='utf-8') as file:
@@ -173,12 +172,12 @@ def main():
     data_dev_out = (data_out[0][int(len(data_out[0]) * 0.8):],data_out[1][int(len(data_out[1]) * 0.8):])
     # data_train_out = (data_out[0][int(len(data_out[0]) * 0.9):],data_out[1][int(len(data_out[0]) * 0.9):])
     # data_dev_out = (data_out[0][int(len(data_out[0]) * 0.9):],data_out[1][int(len(data_out[0]) * 0.9):])
-    features, callback_info = data_train_out
-    train_dataset =MLDataset(features)
+    features, _ = data_train_out
+    train_dataset = MLDataset(features)
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=args.batch_size,
                               num_workers=0)
-    dev_features, dev_callback_info = data_dev_out
+    dev_features, _ = data_dev_out
     dev_dataset = MLDataset(dev_features)
     dev_loader = DataLoader(dataset=dev_dataset,
                             batch_size=args.batch_size,
