@@ -86,7 +86,7 @@ def convert_examples_to_features(examples, max_seq_len, bert_dir, label2id):
     return out
 
 
-def preprocess_tc(args, data_all):  # 多标签分类任务预处理程序
+def preprocess_tc(args, data_all):  # 文本分类任务预处理程序
     random.shuffle(data_all)
     label2id = {}
     id2label = {}
@@ -104,10 +104,9 @@ def preprocess_tc(args, data_all):  # 多标签分类任务预处理程序
     max_text_len = 0
     for sample in data_all:
         examples.append(InputExample(text=sample["text"],
-                                     labels=sample["labels"]))
+                                    labels=sample["labels"]))
         if len(sample["text"]) > max_text_len:
             max_text_len = len(sample["text"])
-    print("最大文本长度：" + str(max_text_len))
     out = convert_examples_to_features(examples, args.max_seq_len, args.bert_dir, label2id)
     with open(args.data_dir + '{}_data.pkl'.format(args.task_name), 'wb') as f:
         pickle.dump(out, f)
@@ -133,7 +132,7 @@ def test_out(data, tokenizer: BertTokenizer, max_seq_len=512):
 
 if __name__ == '__main__':
     args = Args().get_parser()
-    print('========多标签分类预处理程序========')
+    print('========文本分类预处理程序========')
     with open(args.data_dir + 'datas.json', encoding='utf-8') as file:
         data_all = json.load(file)
     preprocess_tc(args, data_all)

@@ -2,28 +2,6 @@ from transformers import BertModel
 import torch
 import torch.nn as nn
 from torchcrf import CRF
-
-class BertMLClf(nn.Module):
-    def __init__(self, args):
-        super(BertMLClf, self).__init__()
-        self.device = torch.device("cpu" if args.gpu_ids[0] == '-1' else "cuda:" + args.gpu_ids[0])
-        self.bert = BertModel.from_pretrained(args.bert_dir).to(self.device)
-        self.bert_config = self.bert.config
-        out_dims = self.bert_config.hidden_size
-        self.dropout = nn.Dropout(0.3)
-        self.linear = nn.Linear(out_dims, args.num_tags).to(self.device)
-
-
-    def forward(self, token_ids, attention_masks, token_type_ids):
-        bert_outputs = self.bert(
-            input_ids=token_ids,
-            attention_mask=attention_masks,
-            token_type_ids=token_type_ids,
-        )
-        seq_out = bert_outputs[1]
-        seq_out = self.dropout(seq_out)
-        seq_out = self.linear(seq_out)
-        return seq_out
     
 class BertLSTMMLClf(nn.Module):
     def __init__(self, args):
@@ -49,17 +27,16 @@ class BertLSTMMLClf(nn.Module):
             self.linear = nn.Linear(out_dims, args.num_tags).to(self.device)
 
     def forward(self, token_ids, attention_masks, token_type_ids):
-        # assert self.task_type in ("mlc", "ner"), "任务类型不正确！"
+        assert self.task_type in ("tc", "ner"), "任务类型不正确！"
         bert_outputs = self.bert(
             input_ids=token_ids,
             attention_mask=attention_masks,
             token_type_ids=token_type_ids,
         )
-        # if self.task_type == "mlc":
-        seq_out = bert_outputs[1]
-        # seq_out, h = self.lstm(seq_out)
-        seq_out = self.linear(seq_out)
-        return seq_out
+        if self.task_type == "tc":
+            seq_out = bert_outputs[1]
+            seq_out = self.linear(seq_out)
+            return seq_out
         # else:
         #     seq_out = bert_outputs[0]
         #     seq_out, h = self.lstm(seq_out)

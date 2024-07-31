@@ -12,14 +12,16 @@ class Args:
     def initialize(parser):
         parser.add_argument('--data_dir', default="./data/",
                         help='the dir for training data')
+        parser.add_argument('--data_name', default="datas.json",
+                        help='the name for training data')
         parser.add_argument('--output_dir', default="./checkpoints/",
                         help='the output dir for model checkpoints')
         parser.add_argument('--bert_dir', default='../model/chinese-roberta-small-wwm-cluecorpussmall',
         help='bert dir for uer')
-        parser.add_argument('--task_type', default='tc',
-        help='bert dir for uer')
+        parser.add_argument('--task_type', default='tc', help='your task type')
+        parser.add_argument('--task_type_detail', default='singlelabel', help='your task type detail')
         parser.add_argument('--task_name', default='zhaotoubiaonew_projectclassification',
-        help='bert dir for uer')
+        help='your task name')
         # other args
         parser.add_argument('--num_tags', default=0, type=int,
                         help='number of tags')  # 多标签分类的类别数，由程序自动获取
