@@ -49,7 +49,7 @@ def convert_bert_example(args, example: InputExample, tokenizer: BertTokenizer, 
     encode_dict = tokenizer.encode_plus(text=raw_text,
                                         add_special_tokens=True,
                                         max_length=args.max_seq_len,
-                                        truncation_strategy='longest_first',
+                                        truncation='longest_first',
                                         padding="max_length",
                                         return_token_type_ids=True,
                                         return_attention_mask=True)
@@ -121,7 +121,7 @@ def test_out(data, tokenizer: BertTokenizer, max_seq_len=512):
         encode_dict = tokenizer.encode_plus(text=sample,
                                             add_special_tokens=True,
                                             max_length=max_seq_len,
-                                            truncation_strategy='longest_first',
+                                            truncation='longest_first',
                                             padding="max_length",
                                             return_token_type_ids=True,
                                             return_attention_mask=True)

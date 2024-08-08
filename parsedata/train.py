@@ -25,12 +25,6 @@ class Trainer():
         gpu_ids = args.gpu_ids.split(',')
         self.device = torch.device("cpu" if gpu_ids[0] == '-1' else "cuda:" + gpu_ids[0])
         self.model = BertLSTMMLClf(args)
-        if args.task_type == "tc" and args.task_type_detail == "multilabels":
-            self.criterion = Multilabel_Categorical_CrossEntropy()
-        elif args.task_type == "tc" and args.task_type_detail == "singlelabel":
-            self.criterion = nn.CrossEntropyLoss()
-        elif args.task_type == "ner":
-            self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.AdamW(params=self.model.parameters(), lr=args.lr)
         self.train_loader = train_loader
         self.dev_loader = dev_loader
@@ -68,8 +62,7 @@ class Trainer():
                 attention_masks = train_data['attention_masks'].to(self.device)
                 token_type_ids = train_data['token_type_ids'].to(self.device)
                 data_labels = train_data['labels'].to(self.device)
-                outputs = self.model(token_ids, attention_masks, token_type_ids)
-                train_loss = self.criterion(outputs, data_labels)
+                _, train_loss = self.model(token_ids, attention_masks, token_type_ids, data_labels)
                 self.optimizer.zero_grad()
                 train_loss.backward()
                 self.optimizer.step()
@@ -101,7 +94,7 @@ class Trainer():
 
     def dev(self):
         self.model.eval()
-        total_loss = 0.0
+        total_loss = []
         dev_outputs = []
         dev_targets = []
         self.MyMainWindow.cpercentage_Dev = 0
@@ -117,30 +110,18 @@ class Trainer():
                 attention_masks = dev_data['attention_masks'].to(self.device)
                 token_type_ids = dev_data['token_type_ids'].to(self.device)
                 data_labels = dev_data['labels'].to(self.device)
-                outputs = self.model(token_ids, attention_masks, token_type_ids)
-                dev_loss = self.criterion(outputs, data_labels)
-                total_loss += dev_loss.item()
+                logits, dev_loss = self.model(token_ids, attention_masks, token_type_ids, data_labels)
+                total_loss.append(dev_loss.detach().item())
                 self.MyMainWindow.cpercentage_Dev += 1 / len(self.dev_loader)  # 这代表当前进度
                 self.MyMainWindow.update_Dev(self.MyMainWindow.cpercentage_Dev)
-                if args.task_type == "tc" and args.task_type_detail == "singlelabel":
-                    outputs = nn.functional.softmax(outputs, dim=1).cpu().detach().numpy().tolist()
-                    outputs = [np.argmax(outputs[i]) for i in range(len(outputs))]
-                    dev_outputs.extend(outputs)
-                elif args.task_type == "tc" and args.task_type_detail == "multilabels":
-                    outputs = torch.sigmoid(outputs).cpu().detach().numpy().tolist()
-                    outputs = (np.array(outputs) > 0.5).astype(int)
-                    dev_outputs.extend(outputs.tolist())
-                else:
-                    outputs = nn.functional.softmax(outputs, dim=1).cpu().detach().numpy()
-                    outputs = [[np.argmax(outputs[i, :, k]) for k in range(len(outputs[i][0]))] for i in range(len(outputs))]
-                    dev_outputs.extend(outputs)
+                dev_outputs.extend(logits)
                 dev_targets.extend(data_labels.cpu().detach().numpy().tolist())
-                self.MyMainWindow.label_DevLoss.setText("TLoss:{:.6f}".format(total_loss))
+                self.MyMainWindow.label_DevLoss.setText("TLoss:{:.6f}".format(np.mean(total_loss)))
                 progressvalue += 1 / len(self.dev_loader)
                 self.MyMainWindow.update_Dev(progressvalue)
             self.MyMainWindow.timer_Dev.stop()
         macro_accuracy, micro_accuracy, f1 = getresult(args, dev_outputs, dev_targets)
-        return total_loss, macro_accuracy, micro_accuracy, f1
+        return np.mean(total_loss), macro_accuracy, micro_accuracy, f1
 
     def test(self, checkpoint_path):
         model = self.model
@@ -157,27 +138,11 @@ class Trainer():
                 attention_masks = test_data['attention_masks'].to(self.device)
                 token_type_ids = test_data['token_type_ids'].to(self.device)
                 data_labels = test_data['labels'].to(self.device)
-                outputs = model(token_ids, attention_masks, token_type_ids)
-                test_loss = self.criterion(outputs, data_labels)
+                logits, test_loss = self.model(token_ids, attention_masks, token_type_ids, data_labels)
                 total_loss += test_loss.item()
-                if args.task_type == "tc" and args.task_type_detail == "singlelabel":
-                    outputs = nn.functional.softmax(outputs, dim=1).cpu().detach().numpy().tolist()
-                    outputs = [np.argmax(outputs[i]) for i in range(len(outputs))]
-                    test_outputs.extend(outputs)
-                elif args.task_type == "tc" and args.task_type_detail == "multilabels":
-                    outputs = torch.sigmoid(outputs).cpu().detach().numpy().tolist()
-                    outputs = (np.array(outputs) > 0.5).astype(int)
-                    test_outputs.extend(outputs.tolist())
-                else:
-                    outputs = nn.functional.softmax(outputs, dim=1).cpu().detach().numpy()
-                    outputs = [[np.argmax(outputs[i, :, k]) for k in range(len(outputs[i][0]))] for i in range(len(outputs))]
-                    test_outputs.extend(outputs)
+                test_outputs.extend(logits)
                 test_targets.extend(data_labels.cpu().detach().numpy().tolist())
         return total_loss, test_outputs, test_targets
-
-    def get_classification_report(self, outputs, targets, labels):
-        report = classification_report(targets, outputs, target_names=labels)
-        return report
 
 
 def train(MyMainWindow):
@@ -222,7 +187,6 @@ def train(MyMainWindow):
     checkpoint_path = './checkpoints/best.pt'
     total_loss, test_outputs, test_targets = trainer.test(checkpoint_path)
     report = getreport(args, test_outputs, test_targets, labels)
-    # report = trainer.get_classification_report(test_outputs, test_targets, labels)
     MyMainWindow.update_TextBrowser(report)
     MyMainWindow.update_TextBrowser('========模型训练完成！========')
 

@@ -42,7 +42,7 @@ def convert_bert_example(example: InputExample, tokenizer: BertTokenizer,
     encode_dict = tokenizer.encode_plus(text=raw_text,
                                         add_special_tokens=True,
                                         max_length=max_seq_len,
-                                        truncation_strategy='longest_first',
+                                        truncation='longest_first',
                                         padding="max_length",
                                         return_token_type_ids=True,
                                         return_attention_mask=True)
@@ -122,7 +122,7 @@ def parsetextandlabels(args, sample, label2id):
                     labels[annotation["value"]["start"] + 1:annotation["value"]["end"]] \
                         = [label2id["I-" + annotation["value"]["labels"][0]]] * (annotation["value"]["end"] - annotation["value"]["start"] - 1)
     if len(sample["data"]["text"]) > args.max_seq_len - 2:  # 若是长度过剩，做截断。-2是因为编码时会自动在开头补一个[CLS]，在结尾补一个[SEP]。
-        sample["data"]["text"] = sample["data"]["text"][:args.max_seq_len - 3]
+        sample["data"]["text"] = sample["data"]["text"][:args.max_seq_len - 2]
         labels.insert(0, label2id["[CLS]"])
         labels[args.max_seq_len - 1] = label2id["[SEP]"]
         labels = labels[:args.max_seq_len]
@@ -133,7 +133,7 @@ def parsetextandlabels(args, sample, label2id):
     else:
         labels.insert(0, label2id["[CLS]"])
         labels.append(label2id["[SEP]"])
-    return InputExample(text=sample["data"]["text"], labels=labels)
+    return InputExample(text=list(sample["data"]["text"]), labels=labels)  # 踩坑：输入给分词器的text必须以list的形式，否则让分词器自动分词很可能导致token长度被缩短
 
 
 def test_out(data, tokenizer: BertTokenizer, max_seq_len=512):
@@ -143,7 +143,7 @@ def test_out(data, tokenizer: BertTokenizer, max_seq_len=512):
         encode_dict = tokenizer.encode_plus(text=sample,
                                             add_special_tokens=True,
                                             max_length=max_seq_len,
-                                            truncation_strategy='longest_first',
+                                            truncation='longest_first',
                                             padding="max_length",
                                             return_token_type_ids=True,
                                             return_attention_mask=True)

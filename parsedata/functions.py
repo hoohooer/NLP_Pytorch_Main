@@ -116,9 +116,10 @@ def getreport(args, outputs, targets, labels):
             for p in range(len(outputs_labels) - 1, 0, -1):
                 for q in range(len(targets_labels) - 1, 0, -1):
                     if outputs_labels[p] == targets_labels[q]:
+                        reportdf.loc[outputs_labels[p][0]]['TP'] += 1
                         outputs_labels.pop(p)
                         targets_labels.pop(q)
-                        reportdf.loc[outputs_labels[p][0]]['TP'] += 1
+                        break
             for outputs_label in outputs_labels:
                 reportdf.loc[outputs_label[0]]['FP'] += 1
             for targets_label in targets_labels:
