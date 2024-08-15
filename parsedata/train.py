@@ -17,6 +17,8 @@ import pandas as pd
 import time
 import re
 from PyQt5.QtCore import QTimer
+import shutil
+
 
 args = Args().get_parser()
 class Trainer():
@@ -30,13 +32,10 @@ class Trainer():
         self.dev_loader = dev_loader
         self.test_loader = test_loader
 
-    def load_ckp(self, model, optimizer, checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
+    def load_ckp(self, model):
+        checkpoint = torch.load(os.path.join(args.checkpoint_path, 'bestmodel.pt'))
         model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        epoch = checkpoint['epoch']
-        loss = checkpoint['loss']
-        return model, optimizer, epoch, loss
+        return model
 
     def save_ckp(self, state, checkpoint_path):
         torch.save(state, checkpoint_path)
@@ -73,22 +72,30 @@ class Trainer():
                 global_step += 1
                 if global_step % eval_step == 0:
                     dev_loss, macro_accuracy, micro_accuracy, f1 = self.dev()
-                    self.MyMainWindow.update_TextBrowser(
-                        "【dev】 epoch：{}, loss：{:.6f}, macro_accuracy：{:.4f}, micro_accuracy：{:.4f}, f1：{:.4f}, former_best_f1：{:.4f}"
+                    if args.task_type_detail == "multilabels":
+                        self.MyMainWindow.update_TextBrowser(
+                        "【dev】 轮数：{}, loss：{:.6f}, 样本正确率：{:.4f}, 标签正确率：{:.4f}, f1：{:.4f}, 历史最高f1：{:.4f}"
                         .format(epoch + 1, dev_loss, macro_accuracy, micro_accuracy, f1, former_best_f1))
+                    elif args.task_type_detail == "singlelabel":
+                        self.MyMainWindow.update_TextBrowser(
+                        "【dev】 轮数：{}, loss：{:.6f}, 样本正确率：{:.4f}, f1：{:.4f}, 历史最高f1：{:.4f}"
+                        .format(epoch + 1, dev_loss, macro_accuracy, f1, former_best_f1))
+                    else:
+                        self.MyMainWindow.update_TextBrowser(
+                        "【dev】 轮数：{}, loss：{:.6f}, 标签正确率：{:.4f}, f1：{:.4f}, 历史最高f1：{:.4f}"
+                        .format(epoch + 1, dev_loss, macro_accuracy, f1, former_best_f1))
                     if f1 > former_best_f1:
-                        self.MyMainWindow.update_TextBrowser("------------>save model")
+                        self.MyMainWindow.update_TextBrowser("--------保存模型--------")
                         checkpoint = {
-                            'epoch': epoch,
-                            'loss': dev_loss,
                             'state_dict': self.model.state_dict(),
-                            'optimizer': self.optimizer.state_dict(),
+                            'pretrained_model': args.bert_dir,
+                            'task_type': args.task_type,
+                            'task_type_detail': args.task_type_detail
                         }
                         former_best_f1 = f1
-                        checkpoint_path = os.path.join(args.output_dir, 'best.pt')
-                        if not os.path.exists(args.output_dir):
-                            os.makedirs(args.output_dir)
-                        self.save_ckp(checkpoint, checkpoint_path)
+                        if not os.path.exists(args.checkpoint_path):
+                            os.makedirs(args.checkpoint_path)
+                        self.save_ckp(checkpoint, os.path.join(args.checkpoint_path, 'bestmodel.pt'))
             self.MyMainWindow.timer_Train.stop()
                 
 
@@ -123,12 +130,10 @@ class Trainer():
         macro_accuracy, micro_accuracy, f1 = getresult(args, dev_outputs, dev_targets)
         return np.mean(total_loss), macro_accuracy, micro_accuracy, f1
 
-    def test(self, checkpoint_path):
-        model = self.model
-        optimizer = self.optimizer
-        model, optimizer, epoch, loss = self.load_ckp(model, optimizer, checkpoint_path)
-        model.eval()
-        model.to(self.device)
+    def test(self):
+        self.model = self.load_ckp(self.model)
+        self.model.eval()
+        self.model.to(self.device)
         total_loss = 0.0
         test_outputs = []
         test_targets = []
@@ -151,9 +156,9 @@ def train(MyMainWindow):
     assert args.task_name, MyMainWindow.update_TextBrowser("请输入任务名称！")
     assert args.task_type, MyMainWindow.update_TextBrowser("请选择任务类型！")
     if os.path.exists(args.data_dir + '{}_id2label.json'.format(args.task_name)) and os.path.exists(args.data_dir + '{}_data.pkl'.format(args.task_name)):
-        MyMainWindow.update_TextBrowser("========读取预处理文件========")
+        MyMainWindow.update_TextBrowser("============读取预处理文件============")
     else:
-        MyMainWindow.update_TextBrowser('========开始预处理========')
+        MyMainWindow.update_TextBrowser('============开始预处理============')
         with open(args.data_dir + args.data_name, encoding='utf-8') as file:
             data_all = json.load(file)
             if args.task_type == "tc":
@@ -161,6 +166,9 @@ def train(MyMainWindow):
             else:
                 preprocess_ner(args, data_all)
     with open(args.data_dir + '{}_id2label.json'.format(args.task_name), 'r', encoding='utf-8') as f:
+        if not os.path.exists(args.checkpoint_path):
+            os.makedirs(args.checkpoint_path)
+        shutil.copyfile(args.data_dir + '{}_id2label.json'.format(args.task_name), args.checkpoint_path + '/id2label.json')
         id2label = json.load(f)
         labels = [str(value) for value in id2label.values()]
     with open(args.data_dir + '{}_data.pkl'.format(args.task_name), 'rb') as f:
@@ -179,13 +187,12 @@ def train(MyMainWindow):
                             batch_size=args.batch_size,
                             num_workers=0)
     # 训练和验证
-    MyMainWindow.update_TextBrowser('========开始训练========')
+    MyMainWindow.update_TextBrowser('============开始训练============')
     trainer = Trainer(args, train_loader, dev_loader, dev_loader, MyMainWindow)  # 测试集此处同dev
     trainer.train()
     # 测试
-    MyMainWindow.update_TextBrowser('========开始测试========')
-    checkpoint_path = './checkpoints/best.pt'
-    total_loss, test_outputs, test_targets = trainer.test(checkpoint_path)
+    MyMainWindow.update_TextBrowser('============开始测试============')
+    total_loss, test_outputs, test_targets = trainer.test()
     report = getreport(args, test_outputs, test_targets, labels)
     MyMainWindow.update_TextBrowser(report)
     MyMainWindow.update_TextBrowser('========模型训练完成！========')
@@ -198,6 +205,7 @@ def UpdateArgs(MyMainWindow):
         args.data_dir, args.data_name = match.groups()
     args.bert_dir = MyMainWindow.lineEdit_PretrainedModel.text()
     args.task_name = MyMainWindow.lineEdit_TaskName.text() or None
+    args.checkpoint_path = args.output_dir + args.task_name
     task_type = MyMainWindow.comboBox_TaskType.currentText() or None
     if task_type == "文本分类":
         args.task_type = "tc"

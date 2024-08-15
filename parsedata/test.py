@@ -1,64 +1,95 @@
 from transformers import BertTokenizer
-import models
+from parsedata.models import *
+from parsedata.functions import *
+from parsedata.argsconfig import Args
 import torch
 import json
 import torch.nn as nn
-from parsedata.argsconfig import *
 import os
-from parsedata.preprocess_tc import test_out
+from parsedata import preprocess_tc
+from parsedata import preprocess_ner
 
-checkpoint_path = './checkpoints/best.pt'
 
-
+args = Args().get_parser()
 class Tester:
     def __init__(self, args):
-        self.args = args
         gpu_ids = args.gpu_ids.split(',')
         self.device = torch.device("cpu" if gpu_ids[0] == '-1' else "cuda:" + gpu_ids[0])
-        # self.model = models.BertMLClf(args)
-        self.model = models.BertLSTMMLClf(args)
-        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.args.lr)
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.checkpoint = torch.load(os.path.join(args.checkpoint_path, 'bestmodel.pt'))
+        args.task_type = self.checkpoint['task_type']
+        args.task_type_detail = self.checkpoint['task_type_detail']
+        self.model = BertLSTMMLClf(args)
+        self.model.load_state_dict(self.checkpoint['state_dict'])
+        self.model.pretrained_model = self.checkpoint['pretrained_model']
+        self.optimizer = torch.optim.AdamW(params=self.model.parameters(), lr=args.lr)
 
-    def load_ckp(self, model, optimizer, checkpoint_path):
-        checkpoint = torch.load(checkpoint_path)
-        model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        epoch = checkpoint['epoch']
-        loss = checkpoint['loss']
-        return model, optimizer, epoch, loss
-
-    def get_result(self, input_examples):
+    def get_result(self, input_examples, id2label):
         result_list = []
-        model = self.model
-        optimizer = self.optimizer
-        model, optimizer, epoch, loss = self.load_ckp(model, optimizer, checkpoint_path)
-        model.eval()
-        model.to(self.device)
+        self.model.eval()
+        self.model.to(self.device)
         for input_example in input_examples:
             token_ids = torch.tensor(input_example['token_ids']).unsqueeze(0).to(self.device)
             attention_masks = torch.tensor(input_example['attention_masks']).unsqueeze(0).to(self.device)
             token_type_ids = torch.tensor(input_example['token_type_ids']).unsqueeze(0).to(self.device)
-            output = model(token_ids, attention_masks, token_type_ids)
-            output = torch.squeeze(output)
-            active_labels_index = torch.squeeze(torch.nonzero(output > 0), dim=0).tolist()
-            active_labels = [id2label[str(index[0])] for index in active_labels_index]
-            if active_labels == []:
-                active_labels.append("其它")
-            result_list.append(active_labels)
+            logits, _ = self.model(token_ids, attention_masks, token_type_ids)
+            if self.model.task_type_detail == "singlelabel":
+                active_label = id2label[str(logits[0])]
+                result_list.append(active_label)
+            elif self.model.task_type_detail == "multilabels":
+                active_label = [id2label[str(i)] for i in range(len(logits[0])) if logits[0][i] == 1]
+                if active_label == []:
+                    active_label.append("未匹配标签")
+                result_list.append(active_label)
+            elif self.model.task_type == "ner":
+                active_labellist = [id2label[str(logits[0][i])] for i in range(len(logits[0]))]
+                for i in range(len(active_labellist)):
+                    if active_labellist[i][0] == "S":
+                        result_list.append([i, i+1, active_labellist[i][2:]])
+                    elif active_labellist[i][0] == "B" and i < len(active_labellist) - 2:
+                        for j in range(i + 1, len(active_labellist) - 1):
+                            if active_labellist[j][0] == "E" and active_labellist[i][2:] == active_labellist[j][2:]:
+                                result_list.append([i, j+1, active_labellist[i][2:]])
+                                i = j
+                                break
+                            elif active_labellist[j][0] == "I" and active_labellist[i][2:] == active_labellist[j][2:] and \
+                                active_labellist[j + 1] in ("O", "[SEP]"):  # 考虑没有结束标志的特殊情况，后期可以去除
+                                result_list.append([i, j+1, active_labellist[i][2:]])
+                                i = j
+                                break
+                    elif i > 0 and active_labellist[i][0] == "I" and active_labellist[i - 1] in ("O", "[CLS]") and i < len(active_labellist) - 2:  # 考虑没有开始标志的特殊情况，后期可以去除
+                        for j in range(i + 1, len(active_labellist) - 1):
+                            if active_labellist[j][0] == "E" and active_labellist[i][2:] == active_labellist[j][2:]:
+                                result_list.append([i, j+1, active_labellist[i][2:]])
+                                i = j
+                                break
         return result_list
+    
 
-if __name__ == '__main__':
-    args = Args().get_parser()
-    assert os.path.exists(args.data_dir + '{}_id2label.json'.format(args.task_name)), '缺少id2label文件，请检查。'
-    with open(args.data_dir + '{}_id2label.json'.format(args.task_name), 'r', encoding='utf-8') as f:
+def test(MyDeploymentDialog):
+    UpdateArgs(MyDeploymentDialog)
+    input_text = MyDeploymentDialog.textBrowser_Input.toPlainText()
+    input = [input_text]
+    results = parsetext(input, args)
+    MyDeploymentDialog.textBrowser_Output.setText(str(results[0]))
+
+
+def UpdateArgs(MyDeploymentDialog):
+    args.checkpoint_path = MyDeploymentDialog.lineEdit_TrainedModel.text()
+    args.port = MyDeploymentDialog.lineEdit_Port.text()
+    args.useport = MyDeploymentDialog.checkBox_UsePort.isChecked()
+
+
+def parsetext(input, args):
+    with open(args.checkpoint_path + '/id2label.json', 'r', encoding='utf-8') as f:
         id2label = json.load(f)
     args.num_tags = len(id2label)
     tester = Tester(args)
-    input = ['海螺新材：第九届董事会第三十八次会议决议公告']
-    tokenizer = BertTokenizer.from_pretrained("../model/chinese-roberta-small-wwm-cluecorpussmall")
-    input_examples = test_out(input, tokenizer=tokenizer)
-    output_results = tester.get_result(input_examples)
-    print(output_results)
-
+    tokenizer = BertTokenizer.from_pretrained(tester.model.pretrained_model)
+    if tester.model.task_type == "tc":
+        input_examples = preprocess_tc.test_out(input, tokenizer=tokenizer)
+    elif tester.model.task_type == "ner":
+        input_examples = preprocess_ner.test_out(input, tokenizer=tokenizer)
+    output_results = tester.get_result(input_examples, id2label)
+    return output_results
+    
 

@@ -1,5 +1,6 @@
 from transformers import BertModel, BertConfig
 from parsedata.functions import *
+# from parsedata.functions import *
 import torch
 import torch.nn as nn
 from torchcrf import CRF
@@ -46,6 +47,7 @@ class BertLSTMMLClf(nn.Module):
         if self.task_type == "tc":
             seq_out = bert_outputs[1]
             seq_out = self.linear(seq_out)
+            loss = None
             if labels is not None:
                 loss = self.criterion(seq_out, labels)
             if self.task_type_detail == "singlelabel":

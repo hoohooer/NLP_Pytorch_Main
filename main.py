@@ -1,10 +1,11 @@
 import sys
 from Ui_MainWindow import Ui_MainWindow  
+from Ui_DeploymentDialog import Ui_DeploymentDialog
 import qtawesome
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtGui import QTextCursor
-from parsedata import argsconfig, train
+from parsedata import argsconfig, train, test
 import time
 import os
 import json
@@ -15,7 +16,7 @@ import traceback
 
 config = configparser.ConfigParser()
 args = argsconfig.Args().get_parser()
-class MyMainWindow(QtWidgets.QMainWindow,Ui_MainWindow):
+class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self,parent=None):
         super(MyMainWindow,self).__init__(parent)
         self.setupUi(self)
@@ -85,10 +86,8 @@ class MyMainWindow(QtWidgets.QMainWindow,Ui_MainWindow):
 
     def changedetailtext(self):  # 根据第一个下拉框的值改变第二个下拉框的选项
         self.comboBox_TaskTypeDetail.clear()
-        self.comboBox_TaskTypeDetail.addItems([""])
         if self.comboBox_TaskType.currentText() == "文本分类":
             self.comboBox_TaskTypeDetail.addItems(["单标签分类", "多标签分类"])
-
     
     def saveconfig(self):
         config['DEFAULT'] = {'lineEdit_PretrainedModel': self.lineEdit_PretrainedModel.text(),
@@ -116,7 +115,34 @@ class MyMainWindow(QtWidgets.QMainWindow,Ui_MainWindow):
         self.comboBox_TaskType.setCurrentText(config['DEFAULT']['comboBox_TaskType'])
         self.comboBox_TaskTypeDetail.setCurrentText(config['DEFAULT']['comboBox_TaskTypeDetail'])
         QtWidgets.QMessageBox.information(self,"加载配置","已加载配置！")
-        
+
+    def openwindow(self):
+        self.MyDeploymentDialog = MyDeploymentDialog()
+        self.MyDeploymentDialog.show()
+
+
+class MyDeploymentDialog(QtWidgets.QMainWindow, Ui_DeploymentDialog):
+    def __init__(self,parent=None):
+        super(MyDeploymentDialog,self).__init__(parent)
+        self.setupUi(self)
+        self.pushButton_Confirm.clicked.connect(self.runtest)
+
+    def browse_TrainedModel(self):  # 选择训练完成的模型存储路径
+        directory = QtWidgets.QFileDialog.getExistingDirectory(None,"选取文件夹","./checkpoints/")
+        self.lineEdit_TrainedModel.setText(directory)
+      
+    def runtest(self):  # 调用测试主函数
+        self.start_time = time.time()
+        try:
+            test.test(self)
+        except Exception as e:
+            self.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>Error:{}</span>".format(e.args[0]))
+            print(traceback.format_exc())
+    
+    def update_TextBrowser(self, text):  # 更新主文本框
+        self.textBrowser_Output.append(text)
+        QCoreApplication.processEvents()
+    
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
