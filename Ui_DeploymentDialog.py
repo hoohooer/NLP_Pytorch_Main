@@ -46,10 +46,6 @@ class Ui_DeploymentDialog(object):
         self.label_Input.setGeometry(QtCore.QRect(20, 100, 80, 20))
         self.label_Input.setStyleSheet("font: 12pt \"宋体\";")
         self.label_Input.setObjectName("label_Input")
-        self.textBrowser_Input = QtWidgets.QTextBrowser(DeploymentDialog)
-        self.textBrowser_Input.setGeometry(QtCore.QRect(20, 130, 750, 190))
-        self.textBrowser_Input.setReadOnly(False)
-        self.textBrowser_Input.setObjectName("textBrowser_Input")
         self.pushButton_Confirm = QtWidgets.QPushButton(DeploymentDialog)
         self.pushButton_Confirm.setGeometry(QtCore.QRect(700, 330, 70, 30))
         font = QtGui.QFont()
@@ -84,9 +80,14 @@ class Ui_DeploymentDialog(object):
         self.checkBox_UsePort = QtWidgets.QCheckBox(DeploymentDialog)
         self.checkBox_UsePort.setGeometry(QtCore.QRect(100, 100, 150, 20))
         self.checkBox_UsePort.setObjectName("checkBox_UsePort")
+        self.textEdit_Input = QtWidgets.QTextEdit(DeploymentDialog)
+        self.textEdit_Input.setGeometry(QtCore.QRect(20, 130, 750, 190))
+        self.textEdit_Input.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)
+        self.textEdit_Input.setObjectName("textEdit_Input")
 
         self.retranslateUi(DeploymentDialog)
         self.pushButton_TrainedModel.clicked.connect(DeploymentDialog.browse_TrainedModel) # type: ignore
+        self.pushButton_Clear.clicked.connect(self.textBrowser_Output.clear) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(DeploymentDialog)
 
     def retranslateUi(self, DeploymentDialog):
@@ -96,7 +97,7 @@ class Ui_DeploymentDialog(object):
         self.pushButton_TrainedModel.setText(_translate("DeploymentDialog", "选择"))
         self.lineEdit_TrainedModel.setText(_translate("DeploymentDialog", "./checkpoints/"))
         self.label_Port.setText(_translate("DeploymentDialog", "部署端口"))
-        self.lineEdit_Port.setText(_translate("DeploymentDialog", "2066"))
+        self.lineEdit_Port.setText(_translate("DeploymentDialog", "http://10.17.107.43:2066"))
         self.label_Input.setText(_translate("DeploymentDialog", "输入模块"))
         self.pushButton_Confirm.setText(_translate("DeploymentDialog", "确定"))
         self.pushButton_Clear.setText(_translate("DeploymentDialog", "清空屏幕"))

@@ -97,7 +97,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>2066</string>
+    <string>http://10.17.107.43:2066</string>
    </property>
    <property name="readOnly">
     <bool>false</bool>
@@ -117,19 +117,6 @@
    </property>
    <property name="text">
     <string>输入模块</string>
-   </property>
-  </widget>
-  <widget class="QTextBrowser" name="textBrowser_Input">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>130</y>
-     <width>750</width>
-     <height>190</height>
-    </rect>
-   </property>
-   <property name="readOnly">
-    <bool>false</bool>
    </property>
   </widget>
   <widget class="QPushButton" name="pushButton_Confirm">
@@ -237,6 +224,19 @@
     <string>是否调用端口</string>
    </property>
   </widget>
+  <widget class="QTextEdit" name="textEdit_Input">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>130</y>
+     <width>750</width>
+     <height>190</height>
+    </rect>
+   </property>
+   <property name="lineWrapMode">
+    <enum>QTextEdit::WidgetWidth</enum>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections>
@@ -253,6 +253,22 @@
     <hint type="destinationlabel">
      <x>399</x>
      <y>319</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_Clear</sender>
+   <signal>clicked()</signal>
+   <receiver>textBrowser_Output</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>734</x>
+     <y>604</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>394</x>
+     <y>484</y>
     </hint>
    </hints>
   </connection>

@@ -156,7 +156,7 @@ def train(MyMainWindow):
     assert args.task_name, MyMainWindow.update_TextBrowser("请输入任务名称！")
     assert args.task_type, MyMainWindow.update_TextBrowser("请选择任务类型！")
     if os.path.exists(args.data_dir + '{}_id2label.json'.format(args.task_name)) and os.path.exists(args.data_dir + '{}_data.pkl'.format(args.task_name)):
-        MyMainWindow.update_TextBrowser("============读取预处理文件============")
+        MyMainWindow.update_TextBrowser('============读取预处理文件============')
     else:
         MyMainWindow.update_TextBrowser('============开始预处理============')
         with open(args.data_dir + args.data_name, encoding='utf-8') as file:

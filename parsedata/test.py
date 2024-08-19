@@ -8,6 +8,7 @@ import torch.nn as nn
 import os
 from parsedata import preprocess_tc
 from parsedata import preprocess_ner
+import requests
 
 
 args = Args().get_parser()
@@ -42,35 +43,49 @@ class Tester:
                 result_list.append(active_label)
             elif self.model.task_type == "ner":
                 active_labellist = [id2label[str(logits[0][i])] for i in range(len(logits[0]))]
+                result = []
                 for i in range(len(active_labellist)):
                     if active_labellist[i][0] == "S":
-                        result_list.append([i, i+1, active_labellist[i][2:]])
+                        result.append([i, i+1, active_labellist[i][2:]])
                     elif active_labellist[i][0] == "B" and i < len(active_labellist) - 2:
                         for j in range(i + 1, len(active_labellist) - 1):
                             if active_labellist[j][0] == "E" and active_labellist[i][2:] == active_labellist[j][2:]:
-                                result_list.append([i, j+1, active_labellist[i][2:]])
+                                result.append([i, j+1, active_labellist[i][2:]])
                                 i = j
                                 break
                             elif active_labellist[j][0] == "I" and active_labellist[i][2:] == active_labellist[j][2:] and \
                                 active_labellist[j + 1] in ("O", "[SEP]"):  # 考虑没有结束标志的特殊情况，后期可以去除
-                                result_list.append([i, j+1, active_labellist[i][2:]])
+                                result.append([i, j+1, active_labellist[i][2:]])
                                 i = j
                                 break
                     elif i > 0 and active_labellist[i][0] == "I" and active_labellist[i - 1] in ("O", "[CLS]") and i < len(active_labellist) - 2:  # 考虑没有开始标志的特殊情况，后期可以去除
                         for j in range(i + 1, len(active_labellist) - 1):
                             if active_labellist[j][0] == "E" and active_labellist[i][2:] == active_labellist[j][2:]:
-                                result_list.append([i, j+1, active_labellist[i][2:]])
+                                result.append([i, j+1, active_labellist[i][2:]])
                                 i = j
                                 break
+                result_list.append(result)
         return result_list
     
 
 def test(MyDeploymentDialog):
     UpdateArgs(MyDeploymentDialog)
-    input_text = MyDeploymentDialog.textBrowser_Input.toPlainText()
+    input_text = MyDeploymentDialog.textEdit_Input.toPlainText()
     input = [input_text]
-    results = parsetext(input, args)
-    MyDeploymentDialog.textBrowser_Output.setText(str(results[0]))
+    if not args.useport:
+        results = parsetext(input, args)
+    else:
+        params = {
+            "serialized": True
+        }
+        data = {
+            "data": json.dumps(input)
+        }
+        response = requests.post(args.port, params=params, json=data)
+        results = json.loads(response.text)
+        # 打印响应内容
+        print('请求成功，响应内容：', response.json())
+    MyDeploymentDialog.textBrowser_Output.append(str(results[0]))
 
 
 def UpdateArgs(MyDeploymentDialog):
@@ -80,7 +95,7 @@ def UpdateArgs(MyDeploymentDialog):
 
 
 def parsetext(input, args):
-    with open(args.checkpoint_path + '/id2label.json', 'r', encoding='utf-8') as f:
+    with open(os.path.join(args.checkpoint_path, 'id2label.json'), 'r', encoding='utf-8') as f:
         id2label = json.load(f)
     args.num_tags = len(id2label)
     tester = Tester(args)

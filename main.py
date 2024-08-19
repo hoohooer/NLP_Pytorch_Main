@@ -7,8 +7,7 @@ from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtGui import QTextCursor
 from parsedata import argsconfig, train, test
 import time
-import os
-import json
+import requests
 from torch.utils.data import DataLoader
 import configparser
 import traceback
@@ -50,8 +49,8 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lineEdit_PretrainedModel.setText(directory)
 
     def browse_Data(self):  # 选择数据存储路径
-        directory = QtWidgets.QFileDialog.getExistingDirectory(None,"选取文件夹","./data/data.json")
-        self.lineEdit_Data.setText(directory)
+        file = QtWidgets.QFileDialog.getOpenFileName(None,"选取文件","./data","JSON Files (*.json)")
+        self.lineEdit_Data.setText(file[0])
 
     def browse_BestModel(self):  # 选择训练完成的模型存储路径
         directory = QtWidgets.QFileDialog.getExistingDirectory(None,"选取文件夹","./checkpoints/")
@@ -74,9 +73,10 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def runparse(self):  # 调用训练主函数
         self.start_time = time.time()
         try:
+            self.textBrowser.clear()
             train.train(self)
-        except Exception as e:
-            self.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>Error:{}</span>".format(e.args[0]))
+        except Exception:
+            self.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>Error:{}</span>".format(traceback.format_exc()))
             print(traceback.format_exc())
         self.updateElapsedTime()
 
@@ -89,7 +89,7 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.comboBox_TaskType.currentText() == "文本分类":
             self.comboBox_TaskTypeDetail.addItems(["单标签分类", "多标签分类"])
     
-    def saveconfig(self):
+    def saveconfig(self):  # 保存配置
         config['DEFAULT'] = {'lineEdit_PretrainedModel': self.lineEdit_PretrainedModel.text(),
                              'lineEdit_BestModel': self.lineEdit_BestModel.text(),
                              'lineEdit_Data': self.lineEdit_Data.text(),
@@ -103,7 +103,7 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             config.write(configfile)
         QtWidgets.QMessageBox.information(self,"保存配置","已保存配置！")
 
-    def loadconfig(self):
+    def loadconfig(self):  # 加载配置
         config.read('config.ini')
         self.lineEdit_PretrainedModel.setText(config['DEFAULT']['lineEdit_PretrainedModel'])
         self.lineEdit_BestModel.setText(config['DEFAULT']['lineEdit_BestModel'])
@@ -126,18 +126,26 @@ class MyDeploymentDialog(QtWidgets.QMainWindow, Ui_DeploymentDialog):
         super(MyDeploymentDialog,self).__init__(parent)
         self.setupUi(self)
         self.pushButton_Confirm.clicked.connect(self.runtest)
+        self.pushButton_PortStatus.clicked.connect(self.testport)
 
     def browse_TrainedModel(self):  # 选择训练完成的模型存储路径
         directory = QtWidgets.QFileDialog.getExistingDirectory(None,"选取文件夹","./checkpoints/")
         self.lineEdit_TrainedModel.setText(directory)
-      
+
     def runtest(self):  # 调用测试主函数
         self.start_time = time.time()
         try:
             test.test(self)
-        except Exception as e:
-            self.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>Error:{}</span>".format(e.args[0]))
+        except Exception:
+            self.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>Error:{}</span>".format(traceback.format_exc()))
             print(traceback.format_exc())
+    
+    def testport(self):  # 测试端口开启与否
+        try:
+            requests.head(self.lineEdit_Port.text(), timeout=1)
+            QtWidgets.QMessageBox.information(self, "端口状态", self.lineEdit_Port.text() + "端口已开启！")
+        except requests.exceptions.RequestException:
+            QtWidgets.QMessageBox.information(self, "端口状态", self.lineEdit_Port.text() + "端口未开启！")
     
     def update_TextBrowser(self, text):  # 更新主文本框
         self.textBrowser_Output.append(text)
