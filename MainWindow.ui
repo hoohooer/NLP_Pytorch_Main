@@ -394,6 +394,11 @@
       <string>实体识别</string>
      </property>
     </item>
+    <item>
+     <property name="text">
+      <string>关系抽取</string>
+     </property>
+    </item>
    </widget>
    <widget class="QLabel" name="label_TaskType">
     <property name="geometry">

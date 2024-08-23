@@ -82,61 +82,48 @@ def convert_examples_to_features(examples, max_seq_len, bert_dir, label2id):
     return out
 
 
-def preprocess_ner(args, data_all):  # 实体识别任务预处理程序
+def preprocess_re(args, data_all):  # 关系抽取任务预处理程序
     random.shuffle(data_all)
     label2id = {}
     id2label = {}
     labels = []
-    labels.append("O")
-    labels.append("[PAD]")  # 用于填充文本序列
-    labels.append("[CLS]")  # 用于标识句子开头
-    labels.append("[SEP]")  # 用于标识句子结尾
-    for sample in data_all:
-        sample["annotations"][0]["result"] = [item for item in sample["annotations"][0]["result"] if item["type"] == "labels"]
-        for annotation_result in sample["annotations"][0]["result"]:
-            label = annotation_result["value"]["labels"][0]
-            if "B-" + label not in labels:
-                labels.append("B-" + label)
-                labels.append("I-" + label)
-                labels.append("E-" + label)
-                labels.append("S-" + label)
-    for i, label in enumerate(labels):
-        label2id[label] = i
-        id2label[i] = label
-    with open(args.data_dir + '{}_id2label.json'.format(args.task_name), 'w', encoding='utf-8') as file:
-        file.write(json.dumps(id2label, ensure_ascii=False))
     examples = []
-    for sample in data_all:
-        examples.append(parsetextandlabels(args, sample, label2id))
+    if args.task_type_detail == "pipeline":
+        labels.append("无关")
+        for sample in data_all:
+            for annotation_result in sample["annotations"][0]["result"]:
+                if annotation_result["type"] == "relation":
+                    if len(annotation_result["labels"]) == 1 and annotation_result["labels"][0] not in labels:
+                        labels.append(annotation_result["labels"][0])
+                    elif len(annotation_result["labels"]) == 0:  # 如果语料的关系没有标签，就将其头尾实体的标签相加作为关系的标签
+                        annotation_result["labels"].append(next((item for item in sample["annotations"][0]["result"] if item["id"] == annotation_result["from_id"]), None)["value"]["labels"][0] \
+                        + "+" + next((item for item in sample["annotations"][0]["result"] if item["id"] == annotation_result["to_id"]), None)["value"]["labels"][0])
+                        if annotation_result["labels"][0] not in labels:
+                            labels.append(annotation_result["labels"][0])
+        for i, label in enumerate(labels):
+            label2id[label] = i
+            id2label[i] = label
+        with open(args.data_dir + '{}_id2label.json'.format(args.task_name), 'w', encoding='utf-8') as file:
+            file.write(json.dumps(id2label, ensure_ascii=False))
+        for sample in data_all:
+            relations = [[item["from_id"], item["to_id"], item["labels"][0]] for item in sample["annotations"][0]["result"] if item["type"] == "relation"]
+            negative_samples = []
+            for i in range(len(sample["annotations"][0]["result"])):
+                for j in range(len(sample["annotations"][0]["result"])):
+                    if i != j and sample["annotations"][0]["result"][i]["type"] == "labels" and sample["annotations"][0]["result"][j]["type"] == "labels":
+                        relation = next((item[2] for item in relations if item[0] == sample["annotations"][0]["result"][i]["id"] and item[1] == sample["annotations"][0]["result"][j]["id"]), "无关")
+                        if relation != "无关":
+                            examples.append(InputExample(text=sample["annotations"][0]["result"][i]["value"]["text"] + "[SEP]" + sample["annotations"][0]["result"][j]["value"]["text"] + "[SEP]" + sample["data"]["text"], \
+                                                        labels=label2id[relation]))
+                        else:
+                            negative_samples.append(InputExample(text=sample["annotations"][0]["result"][i]["value"]["text"] + "[SEP]" + sample["annotations"][0]["result"][j]["value"]["text"] + "[SEP]" + sample["data"]["text"], \
+                                                        labels=label2id[relation]))
+            if len(negative_samples) > 5:  # 适量选取负样本
+                negative_samples = random.sample(negative_samples, 5)
+            examples.extend(negative_samples)
     out = convert_examples_to_features(examples, args.max_seq_len, args.bert_dir, label2id)
     with open(args.data_dir + '{}_data.pkl'.format(args.task_name), 'wb') as f:
         pickle.dump(out, f)
-
-def parsetextandlabels(args, sample, label2id):
-    labels = [0] * len(sample["data"]["text"])  # 首先默认全是"O",即非标签文字
-    if len(sample["annotations"][0]["result"]) > 0:
-        for annotation in sample["annotations"][0]["result"]:
-            if annotation["value"]["end"] - 1 == annotation["value"]["start"]:
-                labels[annotation["value"]["start"]] = label2id["S-" + annotation["value"]["labels"][0]]
-            else:
-                labels[annotation["value"]["start"]] = label2id["B-" + annotation["value"]["labels"][0]]
-                labels[annotation["value"]["end"] - 1] = label2id["E-" + annotation["value"]["labels"][0]]
-                if annotation["value"]["end"] - annotation["value"]["start"] > 1:
-                    labels[annotation["value"]["start"] + 1:annotation["value"]["end"] - 1] \
-                        = [label2id["I-" + annotation["value"]["labels"][0]]] * (annotation["value"]["end"] - annotation["value"]["start"] - 2)
-    if len(sample["data"]["text"]) > args.max_seq_len - 2:  # 若是长度过剩，做截断。-2是因为编码时会自动在开头补一个[CLS]，在结尾补一个[SEP]。
-        sample["data"]["text"] = sample["data"]["text"][:args.max_seq_len - 2]
-        labels.insert(0, label2id["[CLS]"])
-        labels[args.max_seq_len - 1] = label2id["[SEP]"]
-        labels = labels[:args.max_seq_len]
-    elif len(sample["data"]["text"]) < args.max_seq_len - 2:  # 若是长度不足，在分词器编码时会自动补全，这里只需要处理一下label真实值就好。
-        labels.insert(0, label2id["[CLS]"])
-        labels.append(label2id["[SEP]"])
-        labels.extend([label2id["[PAD]"]] * (args.max_seq_len - len(sample["data"]["text"]) - 2))
-    else:
-        labels.insert(0, label2id["[CLS]"])
-        labels.append(label2id["[SEP]"])
-    return InputExample(text=list(sample["data"]["text"]), labels=labels)  # 踩坑：输入给分词器的text必须以list的形式，否则让分词器自动分词很可能导致token长度被缩短
 
 
 def test_out(data, tokenizer: BertTokenizer, max_seq_len=512):
@@ -159,8 +146,8 @@ def test_out(data, tokenizer: BertTokenizer, max_seq_len=512):
 
 if __name__ == '__main__':
     args = Args().get_parser()
-    print('========实体识别预处理程序========')
+    print('========关系抽取预处理程序========')
     with open(args.data_dir + 'datas.json', encoding='utf-8') as file:
         data_all = json.load(file)
-    preprocess_ner(args, data_all)
+    preprocess_re(args, data_all)
     print("已生成预处理数据文件。")

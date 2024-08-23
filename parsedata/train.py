@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader, RandomSampler
 import pickle
 from parsedata.preprocess_tc import preprocess_tc
 from parsedata.preprocess_ner import preprocess_ner
+from parsedata.preprocess_re import preprocess_re
 from parsedata.dataset import MLDataset
 from parsedata.models import *
 from parsedata.functions import *
@@ -76,7 +77,7 @@ class Trainer():
                         self.MyMainWindow.update_TextBrowser(
                         "【dev】 轮数：{}, loss：{:.6f}, 样本正确率：{:.4f}, 标签正确率：{:.4f}, f1：{:.4f}, 历史最高f1：{:.4f}"
                         .format(epoch + 1, dev_loss, macro_accuracy, micro_accuracy, f1, former_best_f1))
-                    elif args.task_type_detail == "singlelabel":
+                    elif args.task_type_detail == "singlelabel" or args.task_type_detail == "pipeline_nered":
                         self.MyMainWindow.update_TextBrowser(
                         "【dev】 轮数：{}, loss：{:.6f}, 样本正确率：{:.4f}, f1：{:.4f}, 历史最高f1：{:.4f}"
                         .format(epoch + 1, dev_loss, macro_accuracy, f1, former_best_f1))
@@ -155,6 +156,8 @@ def train(MyMainWindow):
     UpdateArgs(MyMainWindow)
     assert args.task_name, MyMainWindow.update_TextBrowser("请输入任务名称！")
     assert args.task_type, MyMainWindow.update_TextBrowser("请选择任务类型！")
+    if not checkmodel(args, MyMainWindow):
+        return
     if os.path.exists(args.data_dir + '{}_id2label.json'.format(args.task_name)) and os.path.exists(args.data_dir + '{}_data.pkl'.format(args.task_name)):
         MyMainWindow.update_TextBrowser('============读取预处理文件============')
     else:
@@ -163,8 +166,10 @@ def train(MyMainWindow):
             data_all = json.load(file)
             if args.task_type == "tc":
                 preprocess_tc(args, data_all)
-            else:
+            elif args.task_type == "ner":
                 preprocess_ner(args, data_all)
+            else:
+                preprocess_re(args, data_all, MyMainWindow)
     with open(args.data_dir + '{}_id2label.json'.format(args.task_name), 'r', encoding='utf-8') as f:
         if not os.path.exists(args.checkpoint_path):
             os.makedirs(args.checkpoint_path)
@@ -211,14 +216,30 @@ def UpdateArgs(MyMainWindow):
         args.task_type = "tc"
     elif task_type == "实体识别":
         args.task_type = "ner"
+    elif task_type == "关系抽取":
+        args.task_type = "re"
     task_type_detail = MyMainWindow.comboBox_TaskTypeDetail.currentText() or None
     if task_type_detail == "单标签分类":
         args.task_type_detail = "singlelabel"
     elif task_type_detail == "多标签分类":
         args.task_type_detail = "multilabels"
+    elif task_type_detail == "流水线式":
+        args.task_type_detail = "pipeline"
+    elif task_type_detail == "联合式":
+        args.task_type_detail = "joint"
     else:
         args.task_type_detail = None
     args.max_seq_len = int(MyMainWindow.lineEdit_MaxSeqLen.text())
     args.batch_size = int(MyMainWindow.lineEdit_BatchSize.text())
     args.train_epochs = int(MyMainWindow.lineEdit_Epochs.text())
 
+
+def checkmodel(args, MyMainWindow):  # 流水线式关系抽取任务需要前置的NER模型，如未检测到训练好的NER模型要先训练之
+    if args.task_type_detail == "pipeline":
+        if os.path.exists(args.checkpoint_path + "_ner"):
+            args.task_type_detail = "pipeline_nered"
+        else:
+            MyMainWindow.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>未检测到训练好的NER模型，流水线式关系抽取任务无法训练。 \
+                                            请用相同语料先训练NER模型，并确保其模型保存根路径与关系抽取任务相同，任务名称为关系抽取任务的名称加\"_ner\"后缀。</span>")
+        return False
+    return True

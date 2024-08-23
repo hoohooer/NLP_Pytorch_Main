@@ -1,5 +1,5 @@
 import sys
-from Ui_MainWindow import Ui_MainWindow  
+from Ui_MainWindow import Ui_MainWindow
 from Ui_DeploymentDialog import Ui_DeploymentDialog
 import qtawesome
 from PyQt5 import QtWidgets
@@ -88,6 +88,8 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.comboBox_TaskTypeDetail.clear()
         if self.comboBox_TaskType.currentText() == "文本分类":
             self.comboBox_TaskTypeDetail.addItems(["单标签分类", "多标签分类"])
+        if self.comboBox_TaskType.currentText() == "关系抽取":
+            self.comboBox_TaskTypeDetail.addItems(["流水线式", "联合式"])
     
     def saveconfig(self):  # 保存配置
         config['DEFAULT'] = {'lineEdit_PretrainedModel': self.lineEdit_PretrainedModel.text(),

@@ -6,7 +6,7 @@ import torch.nn as nn
 from torchcrf import CRF
 import numpy as np
 
-    
+
 class BertLSTMMLClf(nn.Module):
     def __init__(self, args):
         super(BertLSTMMLClf, self).__init__()
@@ -36,9 +36,10 @@ class BertLSTMMLClf(nn.Module):
             self.criterion = nn.CrossEntropyLoss()
         elif self.task_type == "ner":
             self.criterion = nn.CrossEntropyLoss()
-
+        elif self.task_type == "re" and self.task_type_detail == "pipeline_nered":
+            self.criterion = nn.CrossEntropyLoss()
+            
     def forward(self, token_ids, attention_masks, token_type_ids, labels=None):
-        assert self.task_type in ("tc", "ner"), "任务类型不正确！"
         bert_outputs = self.bert(
             input_ids=token_ids,
             attention_mask=attention_masks,
@@ -56,7 +57,7 @@ class BertLSTMMLClf(nn.Module):
             else:
                 outputs = torch.sigmoid(seq_out).cpu().detach().numpy().tolist()
                 logits = (np.array(outputs) > 0.5).astype(int).tolist()
-        else:
+        elif self.task_type == "ner":
             seq_out = bert_outputs[0]
             seq_out, h = self.lstm(seq_out)
             seq_out = self.linear(seq_out)
@@ -64,6 +65,15 @@ class BertLSTMMLClf(nn.Module):
             loss = None
             if labels is not None:
                 loss = -self.crf(seq_out, labels, reduction='mean')
+        else:
+            if self.task_type_detail == "pipeline_nered":
+                seq_out = bert_outputs[1]
+                seq_out = self.linear(seq_out)
+                loss = None
+                if labels is not None:
+                    loss = self.criterion(seq_out, labels)
+                outputs = nn.functional.softmax(seq_out, dim=1).cpu().detach().numpy().tolist()
+                logits = [np.argmax(outputs[i]) for i in range(len(outputs))]
         return logits, loss
             
 

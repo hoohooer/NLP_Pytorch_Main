@@ -32,7 +32,7 @@ class Multilabel_Categorical_CrossEntropy(nn.Module):
 def getresult(args, outputs, targets):
     assert len(outputs) == len(targets), "预测值与实际值数量不等，请检查！"
     tp = fp = fn = tn = macro_accuracy = 0
-    if args.task_type_detail == "singlelabel":
+    if args.task_type_detail == "singlelabel" or args.task_type_detail == "pipeline_nered":
         for i in range(len(outputs)):
             if outputs[i] == targets[i]:
                 tp += 1
@@ -69,6 +69,7 @@ def getresult(args, outputs, targets):
                     fp += 1
                     tn += args.num_tags - 2
         macro_accuracy /= len(outputs) * args.max_seq_len
+    
     micro_accuracy = (tp + tn) / (tp + fp + fn + tn)
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
@@ -84,7 +85,7 @@ def getreport(args, outputs, targets, labels):
         reportdf = pd.DataFrame(0, index=unique_labels, columns=['TP','FP','FN','precision','recall','f1-score','support']).astype(float)
     else:
         reportdf = pd.DataFrame(0, index=labels, columns=['TP','FP','FN','precision','recall','f1-score','support']).astype(float)
-    if args.task_type_detail == "singlelabel":
+    if args.task_type_detail == "singlelabel" or args.task_type_detail == "pipeline_nered":
         for i in range(len(outputs)):
             if outputs[i] == targets[i]:
                 reportdf.iloc[outputs[i]]['TP'] += 1
