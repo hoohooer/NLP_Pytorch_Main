@@ -91,7 +91,7 @@ class Trainer():
                             'state_dict': self.model.state_dict(),
                             'pretrained_model': args.bert_dir,
                             'task_type': args.task_type,
-                            'task_type_detail': args.task_type_detail
+                            'task_type_detail': args.task_type_detail if args.task_type_detail != "pipeline_nered" else "pipeline"
                         }
                         former_best_f1 = f1
                         if not os.path.exists(args.checkpoint_path):
