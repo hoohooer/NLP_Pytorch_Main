@@ -114,8 +114,8 @@ def getreport(args, outputs, targets, labels):
                     outputs_labels.append((labels[outputs[i][j]].replace('S-', ''), outputs[i][j], outputs[i][j]))
                 elif labels[outputs[i][j]][0] == 'B':
                     outputs_labels.append((labels[outputs[i][j]].replace('B-', ''), j, next((index for index in range(j, len(outputs[i])) if labels[outputs[i][index]][0] == 'E'), len(targets[i]) - 2)))
-            for p in range(len(outputs_labels) - 1, 0, -1):
-                for q in range(len(targets_labels) - 1, 0, -1):
+            for p in range(len(outputs_labels) - 1, -1, -1):
+                for q in range(len(targets_labels) - 1, -1, -1):
                     if outputs_labels[p] == targets_labels[q]:
                         reportdf.loc[outputs_labels[p][0]]['TP'] += 1
                         outputs_labels.pop(p)

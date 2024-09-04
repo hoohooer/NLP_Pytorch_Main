@@ -45,9 +45,12 @@
      <rect>
       <x>40</x>
       <y>10</y>
-      <width>320</width>
+      <width>120</width>
       <height>30</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;路径中不要出现中文！&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="styleSheet">
      <string notr="true">font: 12pt &quot;宋体&quot;;</string>
@@ -115,9 +118,12 @@
      <rect>
       <x>40</x>
       <y>70</y>
-      <width>320</width>
+      <width>120</width>
       <height>30</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;若所选语料经过了预处理但本次训练更改了参数，请手动删除预处理后的文件：id2label.json，data.pkl&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="styleSheet">
      <string notr="true">font: 12pt &quot;宋体&quot;;</string>
@@ -131,7 +137,7 @@
      <rect>
       <x>40</x>
       <y>130</y>
-      <width>320</width>
+      <width>120</width>
       <height>30</height>
      </rect>
     </property>
@@ -189,6 +195,9 @@
       <height>30</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;如果要训练流水线式关系抽取模型，请先用相同语料、相同模型保存根路径、相同任务名称加&amp;quot;_ner&amp;quot;后缀训练一个实体识别模型，等训练完毕后再训练关系模型（无需改动语料路径和模型保存根路径）。&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
     <property name="styleSheet">
      <string notr="true">font: 12pt &quot;宋体&quot;;</string>
     </property>
@@ -215,7 +224,7 @@
    <widget class="QPushButton" name="pushButton_RunParse">
     <property name="geometry">
      <rect>
-      <x>870</x>
+      <x>690</x>
       <y>200</y>
       <width>70</width>
       <height>30</height>
@@ -583,6 +592,50 @@
     </property>
     <property name="text">
      <string>TLoss:0.000000</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_StopParse">
+    <property name="geometry">
+     <rect>
+      <x>870</x>
+      <y>200</y>
+      <width>70</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>宋体</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="text">
+     <string>停止</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_Pause">
+    <property name="geometry">
+     <rect>
+      <x>780</x>
+      <y>200</y>
+      <width>70</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>宋体</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="text">
+     <string>暂停</string>
     </property>
    </widget>
   </widget>

@@ -143,7 +143,7 @@ def test_out(data, tokenizer: BertTokenizer, max_seq_len=512):
     examples = []
     for sample in data:
         example = {}
-        encode_dict = tokenizer.encode_plus(text=sample,
+        encode_dict = tokenizer.encode_plus(text=list(sample),  # 踩坑：输入给分词器的text必须以list的形式，否则让分词器自动分词很可能导致token长度被缩短
                                             add_special_tokens=True,
                                             max_length=max_seq_len,
                                             truncation='longest_first',

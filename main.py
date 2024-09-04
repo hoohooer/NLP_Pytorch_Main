@@ -11,6 +11,7 @@ import requests
 from torch.utils.data import DataLoader
 import configparser
 import traceback
+import os
 
 
 config = configparser.ConfigParser()
@@ -20,7 +21,10 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         super(MyMainWindow,self).__init__(parent)
         self.setupUi(self)
         self.pushButton_RunParse.clicked.connect(self.runparse)
+        self.pushButton_Pause.clicked.connect(self.pause)
+        self.pushButton_StopParse.clicked.connect(self.stopparse)
         self.comboBox_TaskType.currentTextChanged.connect(self.changedetailtext)
+        self.stop = False
 
     def updateElapsedTime_Train(self):  # 实时更新训练计时
         elapsed = time.time() - self.start_time_Train
@@ -54,6 +58,8 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def browse_BestModel(self):  # 选择训练完成的模型存储路径
         directory = QtWidgets.QFileDialog.getExistingDirectory(None,"选取文件夹","./checkpoints/")
+        if not directory.endswith('/'):
+            directory += '/'
         self.lineEdit_BestModel.setText(directory)
     
     def update_TextBrowser(self, text):  # 更新主文本框
@@ -79,6 +85,13 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>Error:{}</span>".format(traceback.format_exc()))
             print(traceback.format_exc())
         self.updateElapsedTime()
+    
+    def stopparse(self):  # 终止训练
+        self.stop = True
+        self.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>模型将在本轮训练结束后终止训练！</span>")
+    
+    def pause(self):  # 暂停
+        QtWidgets.QMessageBox.information(self,"暂停","程序已暂停！",QtWidgets.QMessageBox.Cancel)
 
     def updateElapsedTime(self):  # 计算总用时
         elapsed = time.time() - self.start_time
@@ -106,17 +119,20 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         QtWidgets.QMessageBox.information(self,"保存配置","已保存配置！")
 
     def loadconfig(self):  # 加载配置
-        config.read('config.ini')
-        self.lineEdit_PretrainedModel.setText(config['DEFAULT']['lineEdit_PretrainedModel'])
-        self.lineEdit_BestModel.setText(config['DEFAULT']['lineEdit_BestModel'])
-        self.lineEdit_Data.setText(config['DEFAULT']['lineEdit_Data'])
-        self.lineEdit_TaskName.setText(config['DEFAULT']['lineEdit_TaskName'])
-        self.lineEdit_MaxSeqLen.setText(config['DEFAULT']['lineEdit_MaxSeqLen'])
-        self.lineEdit_BatchSize.setText(config['DEFAULT']['lineEdit_BatchSize'])
-        self.lineEdit_Epochs.setText(config['DEFAULT']['lineEdit_Epochs'])
-        self.comboBox_TaskType.setCurrentText(config['DEFAULT']['comboBox_TaskType'])
-        self.comboBox_TaskTypeDetail.setCurrentText(config['DEFAULT']['comboBox_TaskTypeDetail'])
-        QtWidgets.QMessageBox.information(self,"加载配置","已加载配置！")
+        if not os.path.exists('config.ini'):
+            QtWidgets.QMessageBox.information(self,"加载配置","未找到配置文件！")
+        else:
+            config.read('config.ini')
+            self.lineEdit_PretrainedModel.setText(config['DEFAULT']['lineEdit_PretrainedModel'])
+            self.lineEdit_BestModel.setText(config['DEFAULT']['lineEdit_BestModel'])
+            self.lineEdit_Data.setText(config['DEFAULT']['lineEdit_Data'])
+            self.lineEdit_TaskName.setText(config['DEFAULT']['lineEdit_TaskName'])
+            self.lineEdit_MaxSeqLen.setText(config['DEFAULT']['lineEdit_MaxSeqLen'])
+            self.lineEdit_BatchSize.setText(config['DEFAULT']['lineEdit_BatchSize'])
+            self.lineEdit_Epochs.setText(config['DEFAULT']['lineEdit_Epochs'])
+            self.comboBox_TaskType.setCurrentText(config['DEFAULT']['comboBox_TaskType'])
+            self.comboBox_TaskTypeDetail.setCurrentText(config['DEFAULT']['comboBox_TaskTypeDetail'])
+            QtWidgets.QMessageBox.information(self,"加载配置","已加载配置！")
 
     def openwindow(self):
         self.MyDeploymentDialog = MyDeploymentDialog()

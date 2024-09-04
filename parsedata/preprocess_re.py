@@ -88,7 +88,7 @@ def preprocess_re(args, data_all):  # 关系抽取任务预处理程序
     id2label = {}
     labels = []
     examples = []
-    if args.task_type_detail == "pipeline":
+    if args.task_type_detail == "pipeline" or args.task_type_detail == "pipeline_nered":
         labels.append("无关")
         for sample in data_all:
             for annotation_result in sample["annotations"][0]["result"]:

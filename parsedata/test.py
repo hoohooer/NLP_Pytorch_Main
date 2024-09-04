@@ -17,6 +17,7 @@ class Tester:
         self.device = torch.device("cpu" if gpu_ids[0] == '-1' else "cuda:" + gpu_ids[0])
         self.checkpoint = torch.load(os.path.join(args.checkpoint_path, 'bestmodel.pt'))
         args.task_type = self.checkpoint['task_type']
+        args.bert_dir = self.checkpoint['pretrained_model']
         if args.task_type_detail != "pipeline_nered":
             args.task_type_detail = self.checkpoint['task_type_detail']
         self.model = BertLSTMMLClf(args)
@@ -133,6 +134,8 @@ def UpdateArgs(MyDeploymentDialog):
     args.checkpoint_path = MyDeploymentDialog.lineEdit_TrainedModel.text()
     args.port = MyDeploymentDialog.lineEdit_Port.text()
     args.useport = MyDeploymentDialog.checkBox_UsePort.isChecked()
+    if args.task_type_detail == "pipeline_nered":
+        args.task_type_detail = "pipeline"
 
 
 def parsetext(input, args):

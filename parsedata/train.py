@@ -46,6 +46,9 @@ class Trainer():
         eval_step = len(self.train_loader)
         former_best_f1 = 0.0
         for epoch in range(args.train_epochs):
+            if self.MyMainWindow.stop:
+                self.MyMainWindow.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>训练已终止！</span>")
+                break
             losslist = []
             self.MyMainWindow.cpercentage_Train = 0
             self.MyMainWindow.start_time_Train = time.time()
@@ -91,7 +94,7 @@ class Trainer():
                             'state_dict': self.model.state_dict(),
                             'pretrained_model': args.bert_dir,
                             'task_type': args.task_type,
-                            'task_type_detail': args.task_type_detail
+                            'task_type_detail': args.task_type_detail if args.task_type_detail != "pipeline_nered" else "pipeline"
                         }
                         former_best_f1 = f1
                         if not os.path.exists(args.checkpoint_path):
@@ -169,7 +172,7 @@ def train(MyMainWindow):
             elif args.task_type == "ner":
                 preprocess_ner(args, data_all)
             else:
-                preprocess_re(args, data_all, MyMainWindow)
+                preprocess_re(args, data_all)
     with open(args.data_dir + '{}_id2label.json'.format(args.task_name), 'r', encoding='utf-8') as f:
         if not os.path.exists(args.checkpoint_path):
             os.makedirs(args.checkpoint_path)
@@ -194,13 +197,14 @@ def train(MyMainWindow):
     # 训练和验证
     MyMainWindow.update_TextBrowser('============开始训练============')
     trainer = Trainer(args, train_loader, dev_loader, dev_loader, MyMainWindow)  # 测试集此处同dev
-    trainer.train()
+    # trainer.train()
     # 测试
-    MyMainWindow.update_TextBrowser('============开始测试============')
-    total_loss, test_outputs, test_targets = trainer.test()
-    report = getreport(args, test_outputs, test_targets, labels)
-    MyMainWindow.update_TextBrowser(report)
-    MyMainWindow.update_TextBrowser('========模型训练完成！========')
+    if not trainer.MyMainWindow.stop:
+        MyMainWindow.update_TextBrowser('============开始测试============')
+        total_loss, test_outputs, test_targets = trainer.test()
+        report = getreport(args, test_outputs, test_targets, labels)
+        MyMainWindow.update_TextBrowser(report)
+        MyMainWindow.update_TextBrowser('========模型训练完成！========')
 
 def UpdateArgs(MyMainWindow):
     args.bert_dir = MyMainWindow.lineEdit_PretrainedModel.text()
@@ -241,5 +245,5 @@ def checkmodel(args, MyMainWindow):  # 流水线式关系抽取任务需要前�
         else:
             MyMainWindow.update_TextBrowser("<span style='font-family:Arial; font-size:12pt; color:#FF0000;'>未检测到训练好的NER模型，流水线式关系抽取任务无法训练。 \
                                             请用相同语料先训练NER模型，并确保其模型保存根路径与关系抽取任务相同，任务名称为关系抽取任务的名称加\"_ner\"后缀。</span>")
-        return False
+            return False
     return True
