@@ -114,15 +114,15 @@ class MyMainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                              'lineEdit_Epochs': self.lineEdit_Epochs.text(),
                              'comboBox_TaskType': self.comboBox_TaskType.currentText(),
                              'comboBox_TaskTypeDetail': self.comboBox_TaskTypeDetail.currentText()}
-        with open('config.ini', 'w') as configfile:
+        with open('nlp_config.ini', 'w') as configfile:
             config.write(configfile)
         QtWidgets.QMessageBox.information(self,"保存配置","已保存配置！")
 
     def loadconfig(self):  # 加载配置
-        if not os.path.exists('config.ini'):
+        if not os.path.exists('nlp_config.ini'):
             QtWidgets.QMessageBox.information(self,"加载配置","未找到配置文件！")
         else:
-            config.read('config.ini')
+            config.read('nlp_config.ini')
             self.lineEdit_PretrainedModel.setText(config['DEFAULT']['lineEdit_PretrainedModel'])
             self.lineEdit_BestModel.setText(config['DEFAULT']['lineEdit_BestModel'])
             self.lineEdit_Data.setText(config['DEFAULT']['lineEdit_Data'])
@@ -175,3 +175,4 @@ if __name__ == "__main__":
     myWin = MyMainWindow()
     myWin.show()
     sys.exit(app.exec_())
+
